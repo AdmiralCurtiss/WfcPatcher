@@ -175,6 +175,7 @@ namespace WfcPatcher {
 				raw_len = dec_len;
 
 				fileWasNotCompressed = true;
+				Console.WriteLine();
 				return pak_buffer;
 			} else {
 				if ( pak_len < 8 ) throw new Exception( "File has a bad header" );

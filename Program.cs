@@ -22,6 +22,7 @@ namespace WfcPatcher {
 			var ndsSrc = new System.IO.FileStream( filename, System.IO.FileMode.Open );
 			var nds = new System.IO.FileStream( filename + ".wfc.nds", System.IO.FileMode.Create );
 			Util.CopyStream( ndsSrc, nds, (int)ndsSrc.Length );
+			ndsSrc.Close();
 
 			// http://dsibrew.org/wiki/DSi_Cartridge_Header
 
@@ -35,6 +36,8 @@ namespace WfcPatcher {
 
 			PatchOverlay( nds, arm9overlayoff, arm9overlaylen );
 			PatchOverlay( nds, arm7overlayoff, arm7overlaylen );
+
+			nds.Close();
 		}
 
 		static void PatchOverlay( System.IO.FileStream nds, uint pos, uint len ) {
@@ -76,6 +79,13 @@ namespace WfcPatcher {
 					nds.Position = overlayPositionStart;
 					nds.Write( data, 0, data.Length );
 
+					// padding
+					int newOverlaySize = data.Length;
+					int diff = (int)overlaySize - newOverlaySize;
+					for ( int j = 0; j < diff; ++j ) {
+						nds.WriteByte( 0xFF );
+					}
+
 					// and write proper offsets
 					overlayPositionEnd = (uint)nds.Position;
 					byte[] newPosEndData = BitConverter.GetBytes( overlayPositionEnd );
@@ -91,10 +101,26 @@ namespace WfcPatcher {
 			string replace = "http://";
 			byte[] searchBytes = Encoding.ASCII.GetBytes( search );
 			byte[] replaceBytes = Encoding.ASCII.GetBytes( replace );
-			int requiredPadding = searchBytes.Length + replaceBytes.Length;
+			int requiredPadding = searchBytes.Length - replaceBytes.Length;
 
-			
+			var results = data.Locate( searchBytes );
+			if ( results.Length == 0 ) {
+				return false;
+			}
 
+			foreach ( int result in results ) {
+				string originalString = Util.GetTextAscii( data, result );
+				string replacedString = originalString.Replace( search, replace );
+				byte[] replacedStringBytes = Encoding.ASCII.GetBytes( replacedString );
+
+				int i = 0;
+				for ( ; i < replacedStringBytes.Length; ++i ) {
+					data[result + i] = replacedStringBytes[i];
+				}
+				for ( ; i < replacedStringBytes.Length + requiredPadding; ++i ) {
+					data[result + i] = 0x00;
+				}
+			}
 
 			return true;
 		}
