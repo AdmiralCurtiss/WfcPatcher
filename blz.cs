@@ -326,20 +326,20 @@ namespace WfcPatcher {
 			if (arm9 != 0) {
 				if (raw_len < 0x4000) {
 					Console.Write(", WARNING: ARM9 must be greater as 16KB, switch [9] disabled");
-				} else if (
-					BitConverter.ToUInt32(raw_buffer, 0x0) != 0xE7FFDEFFu ||
-					BitConverter.ToUInt32(raw_buffer, 0x4) != 0xE7FFDEFFu ||
-					BitConverter.ToUInt32(raw_buffer, 0x8) != 0xE7FFDEFFu ||
-					BitConverter.ToUInt16(raw_buffer, 0xC) != 0xDEFFu
-				) {
-					Console.Write(", WARNING: invalid Secure Area ID, switch [9] disabled");
-				} else if (BitConverter.ToUInt16(raw_buffer, 0x7FE) != 0) {
-					Console.Write(", WARNING: invalid Secure Area 2KB end, switch [9] disabled");
+				//} else if (
+				//	BitConverter.ToUInt32(raw_buffer, 0x0) != 0xE7FFDEFFu ||
+				//	BitConverter.ToUInt32(raw_buffer, 0x4) != 0xE7FFDEFFu ||
+				//	BitConverter.ToUInt32(raw_buffer, 0x8) != 0xE7FFDEFFu ||
+				//	BitConverter.ToUInt16(raw_buffer, 0xC) != 0xDEFFu
+				//) {
+				//	Console.Write(", WARNING: invalid Secure Area ID, switch [9] disabled");
+				//} else if (BitConverter.ToUInt16(raw_buffer, 0x7FE) != 0) {
+				//	Console.Write(", WARNING: invalid Secure Area 2KB end, switch [9] disabled");
 				} else {
 					crc = BLZ_CRC16(raw_buffer, 0x10, 0x07F0);
 					byte[] crcbytes = BitConverter.GetBytes( crc );
 					if (!(raw_buffer[0x0E] == crcbytes[0] && raw_buffer[0x0F] == crcbytes[1])) {
-						Console.Write(", WARNING: CRC16 Secure Area 2KB do not match");
+						Console.WriteLine("WARNING: CRC16 Secure Area 2KB do not match");
 						raw_buffer[0x0E] = crcbytes[0];
 						raw_buffer[0x0F] = crcbytes[1];
 					}
