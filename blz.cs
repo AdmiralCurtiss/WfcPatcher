@@ -153,15 +153,15 @@ namespace WfcPatcher {
 		}
 
 		/*----------------------------------------------------------------------------*/
-		public void BLZ_Decode( string filename ) {
-			byte[] pak_buffer, raw_buffer;
+		public byte[] BLZ_Decode( byte[] pak_buffer ) {
+			byte[] raw_buffer;
 			uint pak, raw, pak_end, raw_end;
 			uint pak_len, raw_len, len, pos, inc_len, hdr_len, enc_len, dec_len;
 			byte flags = 0, mask;
 
-			Console.Write( "- decoding '{0}'", filename );
+			Console.Write( "- decoding" );
 
-			pak_buffer = Load( filename, out pak_len, BLZ_MINIM, BLZ_MAXIM );
+			pak_len = (uint)pak_buffer.Length;
 
 
 			inc_len = BitConverter.ToUInt32( pak_buffer, (int)pak_len - 4 );
@@ -242,19 +242,21 @@ namespace WfcPatcher {
 
 			if ( raw != raw_end ) Console.Write( ", WARNING: unexpected end of encoded file!" );
 
-			Save( filename + ".dec", raw_buffer, raw_len );
+			//Save( filename + ".dec", raw_buffer, raw_len );
 
 			Console.WriteLine();
+
+			return raw_buffer;
 		}
 
 		//*----------------------------------------------------------------------------
-		public void BLZ_Encode(string filename, uint mode) {
-			byte[] raw_buffer, pak_buffer, new_buffer;
+		public byte[] BLZ_Encode( byte[] raw_buffer, uint mode ) {
+			byte[] pak_buffer, new_buffer;
 			uint   raw_len, pak_len, new_len;
 
-			Console.Write("- encoding '%s'", filename);
+			Console.Write("- encoding");
 
-			raw_buffer = Load(filename, out raw_len, RAW_MINIM, RAW_MAXIM);
+			raw_len = (uint)raw_buffer.Length;
 
 			pak_buffer = null;
 			pak_len = BLZ_MAXIM + 1;
@@ -265,9 +267,19 @@ namespace WfcPatcher {
 				pak_len = new_len;
 			}
 
-			Save(filename + ".enc", pak_buffer, pak_len);
+			//Save(filename + ".enc", pak_buffer, pak_len);
+
+			if ( pak_buffer.Length != pak_len ) {
+				byte[] retbuf = new byte[pak_len];
+				for ( int i = 0; i < pak_len; ++i ) {
+					retbuf[i] = pak_buffer[i];
+				}
+				pak_buffer = retbuf;
+			}
 
 			Console.WriteLine();
+
+			return pak_buffer;
 		}
 
 		private void SEARCH(ref uint l, ref uint p, ref byte[] raw_buffer, ref uint raw, ref uint raw_end, ref uint max, ref uint pos, ref uint len) {
