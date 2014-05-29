@@ -43,6 +43,7 @@ namespace WfcPatcher {
 		static void PatchOverlay( System.IO.FileStream nds, uint pos, uint len ) {
 			// http://sourceforge.net/p/devkitpro/ndstool/ci/master/tree/source/ndsextract.cpp
 			// http://sourceforge.net/p/devkitpro/ndstool/ci/master/tree/source/overlay.h
+			// header compression info from http://gbatemp.net/threads/recompressing-an-overlay-file.329576/
 
 			nds.Position = 0x048;
 			uint fatOffset = nds.ReadUInt32();
@@ -56,7 +57,8 @@ namespace WfcPatcher {
 				uint sinitInit = nds.ReadUInt32();
 				uint sinitInitEnd = nds.ReadUInt32();
 				uint fileId = nds.ReadUInt32();
-				uint reserved = nds.ReadUInt32();
+				uint compressedSize = nds.ReadUInt24();
+				byte compressedBitmask = (byte)nds.ReadByte();
 
 				nds.Position = fatOffset + 8 * id;
 				uint overlayPositionStart = nds.ReadUInt32();
@@ -68,16 +70,36 @@ namespace WfcPatcher {
 				nds.Read( data, 0, (int)overlaySize );
 
 				blz blz = new blz();
-				byte[] decData = blz.BLZ_Decode( data );
+				byte[] decData;
+
+				bool compressed = ( compressedBitmask & 0x01 ) == 0x01;
+				if ( compressed ) {
+					decData = blz.BLZ_Decode( data );
+				} else {
+					decData = data;
+				}
+
+
 				if ( ReplaceInData( decData ) ) {
 					// if something was replaced, put it back into the ROM
-					if ( blz.fileWasNotCompressed ) {
-						data = decData; // which it should be anyway but yeah
-					} else {
+					if ( compressed ) {
+
+						uint newCompressedSize = 0;
 						data = blz.BLZ_Encode( decData, 0 );
+						newCompressedSize = (uint)data.Length;
+
+						byte[] newCompressedSizeBytes = BitConverter.GetBytes( newCompressedSize );
+						nds.Position = pos + i + 0x1C;
+						nds.Write( newCompressedSizeBytes, 0, 3 );
+
+					} else {
+						data = decData;
 					}
+
 					nds.Position = overlayPositionStart;
 					nds.Write( data, 0, data.Length );
+
+					overlayPositionEnd = (uint)nds.Position;
 
 					// padding
 					int newOverlaySize = data.Length;
@@ -86,8 +108,7 @@ namespace WfcPatcher {
 						nds.WriteByte( 0xFF );
 					}
 
-					// and write proper offsets
-					overlayPositionEnd = (uint)nds.Position;
+					// new file end offset
 					byte[] newPosEndData = BitConverter.GetBytes( overlayPositionEnd );
 					nds.Position = fatOffset + 8 * id + 4;
 					nds.Write( newPosEndData, 0, 4 );
