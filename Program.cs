@@ -175,9 +175,12 @@ namespace WfcPatcher {
 						data = blz.BLZ_Encode( decData, 0 );
 						newCompressedSize = (uint)data.Length;
 
-						byte[] newCompressedSizeBytes = BitConverter.GetBytes( newCompressedSize );
-						nds.Position = pos + i + 0x1C;
-						nds.Write( newCompressedSizeBytes, 0, 3 );
+						// replace compressed size, if it was used before
+						if ( compressedSize == overlaySize ) {
+							byte[] newCompressedSizeBytes = BitConverter.GetBytes( newCompressedSize );
+							nds.Position = pos + i + 0x1C;
+							nds.Write( newCompressedSizeBytes, 0, 3 );
+						}
 
 					} else {
 						Console.WriteLine( "Replacing overlay " + id + "..." );
