@@ -270,6 +270,23 @@ namespace WfcPatcher {
 			Console.WriteLine();
 		}
 
+		private void SEARCH(ref uint l, ref uint p, ref byte[] raw_buffer, ref uint raw, ref uint raw_end, ref uint max, ref uint pos, ref uint len) {
+			l = BLZ_THRESHOLD;
+			
+			max = raw >= BLZ_N ? BLZ_N : raw;
+			for (pos = 3; pos <= max; pos++) {
+				for (len = 0; len < BLZ_F; len++) {
+					if (raw + len == raw_end) break;
+					if (len >= pos) break;
+					if (raw_buffer[raw + len] != raw_buffer[raw + len - pos]) break;
+				}
+				
+				if (len > l) {
+					p = pos;
+					if ((l = len) == BLZ_F) break;
+				}
+			}
+		}
 		//*----------------------------------------------------------------------------
 		byte[] BLZ_Code( byte[] raw_buffer, uint raw_len, out uint new_len, uint best ) {
 			byte[] pak_buffer; 
@@ -280,115 +297,99 @@ namespace WfcPatcher {
 			ushort crc;
 			byte   mask;
 			
-			new_len = 0;
-			return new byte[0];
-		}	/*
+			pak_tmp = 0;
+			raw_tmp = raw_len;
 
-		#define SEARCH(l,p) { \
-		  l = BLZ_THRESHOLD;                                          \
-																	  \
-		  max = raw - raw_buffer >= BLZ_N ? BLZ_N : raw - raw_buffer; \
-		  for (pos = 3; pos <= max; pos++) {                          \
-			for (len = 0; len < BLZ_F; len++) {                       \
-			  if (raw + len == raw_end) break;                        \
-			  if (len >= pos) break;                                  \
-			  if (*(raw + len) != *(raw + len - pos)) break;          \
-			}                                                         \
-																	  \
-			if (len > l) {                                            \
-			  p = pos;                                                \
-			  if ((l = len) == BLZ_F) break;                          \
-			}                                                         \
-		  }                                                           \
-		}
+			pak_len = raw_len + ((raw_len + 7) / 8) + 11;
+			pak_buffer = Memory((int)pak_len, 1);
 
-		  pak_tmp = 0;
-		  raw_tmp = raw_len;
-
-		  pak_len = raw_len + ((raw_len + 7) / 8) + 11;
-		  pak_buffer = (unsigned char *) Memory(pak_len, sizeof(char));
-
-		  raw_new = raw_len;
-		  if (arm9) {
-			if (raw_len < 0x4000) {
-			  printf(", WARNING: ARM9 must be greater as 16KB, switch [9] disabled");
-			} else if (
-			  (*(unsigned int   *)(raw_buffer + 0x0) != 0xE7FFDEFF) ||
-			  (*(unsigned int   *)(raw_buffer + 0x4) != 0xE7FFDEFF) ||
-			  (*(unsigned int   *)(raw_buffer + 0x8) != 0xE7FFDEFF) ||
-			  (*(unsigned short *)(raw_buffer + 0xC) != 0xDEFF)
-			) {
-			  printf(", WARNING: invalid Secure Area ID, switch [9] disabled");
-			} else if (*(short *)(raw_buffer + 0x7FE)) {
-			  printf(", WARNING: invalid Secure Area 2KB end, switch [9] disabled");
-			} else {
-			  crc = (unsigned short)BLZ_CRC16(raw_buffer + 0x10, 0x07F0);
-			  if (*(unsigned short *)(raw_buffer + 0x0E) != crc) {
-				printf(", WARNING: CRC16 Secure Area 2KB do not match");
-				*(unsigned short *)(raw_buffer + 0x0E) = crc;
-			  }
-			  raw_new -= 0x4000;
-			}
-		  }
-
-		  BLZ_Invert(raw_buffer, raw_len);
-
-		  pak = pak_buffer;
-		  raw = raw_buffer;
-		  raw_end = raw_buffer + raw_new;
-
-		  mask = 0;
-
-		  while (raw < raw_end) {
-			if (!(mask >>= BLZ_SHIFT)) {
-			  *(flg = pak++) = 0;
-			  mask = BLZ_MASK;
-			}
-
-			SEARCH(len_best, pos_best);
-
-			// LZ-CUE optimization start
-			if (best) {
-			  if (len_best > BLZ_THRESHOLD) {
-				if (raw + len_best < raw_end) {
-				  raw += len_best;
-				  SEARCH(len_next, pos_next);
-				  raw -= len_best - 1;
-				  SEARCH(len_post, pos_post);
-				  raw--;
-
-				  if (len_next <= BLZ_THRESHOLD) len_next = 1;
-				  if (len_post <= BLZ_THRESHOLD) len_post = 1;
-
-				  if (len_best + len_next <= 1 + len_post) len_best = 1;
+			raw_new = raw_len;
+			if (arm9 != 0) {
+				if (raw_len < 0x4000) {
+					Console.Write(", WARNING: ARM9 must be greater as 16KB, switch [9] disabled");
+				} else if (
+					BitConverter.ToUInt32(raw_buffer, 0x0) != 0xE7FFDEFFu ||
+					BitConverter.ToUInt32(raw_buffer, 0x4) != 0xE7FFDEFFu ||
+					BitConverter.ToUInt32(raw_buffer, 0x8) != 0xE7FFDEFFu ||
+					BitConverter.ToUInt16(raw_buffer, 0xC) != 0xDEFFu
+				) {
+					Console.Write(", WARNING: invalid Secure Area ID, switch [9] disabled");
+				} else if (BitConverter.ToUInt16(raw_buffer, 0x7FE) != 0) {
+					Console.Write(", WARNING: invalid Secure Area 2KB end, switch [9] disabled");
+				} else {
+					//crc = (unsigned short)BLZ_CRC16(raw_buffer + 0x10, 0x07F0);
+					//if (*(unsigned short *)(raw_buffer + 0x0E) != crc) {
+					//	Console.Write(", WARNING: CRC16 Secure Area 2KB do not match");
+					//	*(unsigned short *)(raw_buffer + 0x0E) = crc;
+					//}
+					raw_new -= 0x4000;
 				}
-			  }
-			}
-			// LZ-CUE optimization end
-
-			*flg <<= 1;
-			if (len_best > BLZ_THRESHOLD) {
-			  raw += len_best;
-			  *flg |= 1;
-			  *pak++ = ((len_best - (BLZ_THRESHOLD+1)) << 4) | ((pos_best - 3) >> 8);
-			  *pak++ = (pos_best - 3) & 0xFF;
-			} else {
-			  *pak++ = *raw++;
 			}
 
-		#if 1
-			if (pak - pak_buffer + raw_len - (raw - raw_buffer) < pak_tmp + raw_tmp) {
+			BLZ_Invert(raw_buffer, 0, raw_len);
+
+			pak = 0;
+			raw = 0;
+			raw_end = raw_new;
+
+			mask = 0;
+
+			while (raw < raw_end) {
+				mask = (byte)( ( (uint)mask ) >> ( (int)BLZ_SHIFT ) );
+
+				if ( mask == 0 ) {
+					flg = pak++;
+					pak_buffer[flg] = 0;
+					mask = BLZ_MASK;
+				}
+
+				SEARCH(ref len_best, ref pos_best, ref raw_buffer, ref raw, ref raw_end, ref max, ref pos, ref len);
+
+				// LZ-CUE optimization start
+				if (best != 0) {
+					if (len_best > BLZ_THRESHOLD) {
+						if (raw + len_best < raw_end) {
+						raw += len_best;
+						SEARCH(ref len_next, ref pos_next, ref raw_buffer, ref raw, ref raw_end, ref max, ref pos, ref len);
+						raw -= len_best - 1;
+						SEARCH(ref len_post, ref pos_post, ref raw_buffer, ref raw, ref raw_end, ref max, ref pos, ref len);
+						raw--;
+
+						if (len_next <= BLZ_THRESHOLD) len_next = 1;
+						if (len_post <= BLZ_THRESHOLD) len_post = 1;
+
+						if (len_best + len_next <= 1 + len_post) len_best = 1;
+						}
+					}
+				}
+				// LZ-CUE optimization end
+
+				pak_buffer[flg] <<= 1;
+				if (len_best > BLZ_THRESHOLD) {
+					raw += len_best;
+					pak_buffer[flg] |= 1;
+					pak_buffer[pak] = (byte)(((len_best - (BLZ_THRESHOLD+1)) << 4) | ((pos_best - 3) >> 8));
+					pak++;
+					pak_buffer[pak] = (byte)((pos_best - 3) & 0xFF);
+					pak++;
+				} else {
+					pak_buffer[pak] = raw_buffer[raw];
+					pak++; raw++;
+				}
+
+		#if true
+				if (pak - pak_buffer + raw_len - (raw - raw_buffer) < pak_tmp + raw_tmp) {
 		#else
-			if (
-			  (((pak - pak_buffer + raw_len - (raw - raw_buffer)) + 3) & -4)
-			  <
-			  pak_tmp + raw_tmp
-			) {
+				if (
+					(((pak - pak_buffer + raw_len - (raw - raw_buffer)) + 3) & -4)
+					<
+					pak_tmp + raw_tmp
+				) {
 		#endif
-			  pak_tmp = pak - pak_buffer;
-			  raw_tmp = raw_len - (raw - raw_buffer);
+				pak_tmp = pak - pak_buffer;
+				raw_tmp = raw_len - (raw - raw_buffer);
+				}
 			}
-		  }
 
 		  while (mask && (mask != 1)) {
 			mask >>= BLZ_SHIFT;
