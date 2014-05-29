@@ -131,6 +131,7 @@ namespace WfcPatcher {
 
 			foreach ( int result in results ) {
 				string originalString = Util.GetTextAscii( data, result );
+				if ( originalString == "https://" ) { continue; } // don't replace lone https, probably used for strcmp to figure out if an URL is SSL or not
 				string replacedString = originalString.Replace( search, replace );
 				byte[] replacedStringBytes = Encoding.ASCII.GetBytes( replacedString );
 
