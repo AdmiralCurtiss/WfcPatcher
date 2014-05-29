@@ -168,7 +168,7 @@ namespace WfcPatcher {
 
 			inc_len = BitConverter.ToUInt32( pak_buffer, (int)pak_len - 4 );
 			if ( inc_len == 0 ) {
-				Console.Write( ", WARNING: not coded file!" );
+				throw new Exception( "Not coded file!" );
 				enc_len = 0;
 				dec_len = pak_len;
 				pak_len = 0;

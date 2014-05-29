@@ -72,20 +72,39 @@ namespace WfcPatcher {
 			byte[] data = new byte[len];
 			nds.Read( data, 0, (int)len );
 
-			// TODO: Figure out if uncompressed ARM9s work with this.
-			//       (are there even uncompressed ARM9s?)
+			// decompress size info: http://www.crackerscrap.com/docs/dsromstructure.html
+			// TODO: Is there a better way to figure out if an ARM9 is compressed?
+
+			nds.Position = nds.Position - 4;
+			uint additionalCompressedSize = nds.ReadUInt32();
+			uint decompressedSize = additionalCompressedSize + len;
+
+			bool compressed;
+			byte[] decData;
+
 			blz blz = new blz();
-			blz.arm9 = 1;
-			byte[] decData = blz.BLZ_Decode( data );
-			int decompressedSize = decData.Length;
+			try {
+				blz.arm9 = 1;
+				decData = blz.BLZ_Decode( data );
+
+				if ( decData.Length == decompressedSize ) {
+					compressed = true;
+				} else {
+					decData = data;
+					compressed = false;
+				}
+			} catch ( Exception ) {
+				decData = data;
+				compressed = false;
+			}
 
 			if ( ReplaceInData( decData ) ) {
-				if ( data.Length == decompressedSize ) {
-					Console.WriteLine( "Replacing ARM9..." );
-					data = decData;
-				} else {
+				if ( compressed ) {
 					Console.WriteLine( "Replacing and recompressing ARM9..." );
 					data = blz.BLZ_Encode( decData, 0 );
+				} else {
+					Console.WriteLine( "Replacing ARM9..." );
+					data = decData;
 				}
 
 				nds.Position = pos;
@@ -156,6 +175,8 @@ namespace WfcPatcher {
 				uint overlayPositionStart = nds.ReadUInt32();
 				uint overlayPositionEnd = nds.ReadUInt32();
 				uint overlaySize = overlayPositionEnd - overlayPositionStart;
+
+				if ( overlaySize == 0 ) { continue; }
 
 				nds.Position = overlayPositionStart;
 				byte[] data = new byte[overlaySize];
