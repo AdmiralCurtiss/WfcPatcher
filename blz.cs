@@ -290,9 +290,10 @@ namespace WfcPatcher {
 		//*----------------------------------------------------------------------------
 		byte[] BLZ_Code( byte[] raw_buffer, uint raw_len, out uint new_len, uint best ) {
 			byte[] pak_buffer; 
-			uint   pak, raw, raw_end, flg, tmp;
-			uint   pak_len, inc_len, hdr_len, enc_len, len, pos, max;
-			uint   len_best, pos_best, len_next, pos_next, len_post, pos_post;
+			uint   pak, raw, raw_end, flg = 0;
+			byte[] tmp;
+			uint   pak_len, inc_len, hdr_len, enc_len, len = 0, pos = 0, max = 0;
+			uint   len_best = 0, pos_best = 0, len_next = 0, pos_next = 0, len_post = 0, pos_post = 0;
 			uint   pak_tmp, raw_tmp, raw_new;
 			ushort crc;
 			byte   mask;
@@ -378,7 +379,7 @@ namespace WfcPatcher {
 				}
 
 		#if true
-				if (pak - pak_buffer + raw_len - (raw - raw_buffer) < pak_tmp + raw_tmp) {
+				if (pak + raw_len - (raw) < pak_tmp + raw_tmp) {
 		#else
 				if (
 					(((pak - pak_buffer + raw_len - (raw - raw_buffer)) + 3) & -4)
@@ -386,64 +387,85 @@ namespace WfcPatcher {
 					pak_tmp + raw_tmp
 				) {
 		#endif
-				pak_tmp = pak - pak_buffer;
-				raw_tmp = raw_len - (raw - raw_buffer);
+				pak_tmp = pak;
+				raw_tmp = raw_len - (raw);
 				}
 			}
 
-		  while (mask && (mask != 1)) {
-			mask >>= BLZ_SHIFT;
-			*flg <<= 1;
-		  }
-
-		  pak_len = pak - pak_buffer;
-
-		  BLZ_Invert(raw_buffer, raw_len);
-		  BLZ_Invert(pak_buffer, pak_len);
-
-		  if (!pak_tmp || (raw_len + 4 < ((pak_tmp + raw_tmp + 3) & -4) + 8)) {
-			pak = pak_buffer;
-			raw = raw_buffer;
-			raw_end = raw_buffer + raw_len;
-
-			while (raw < raw_end) *pak++ = *raw++;
-
-			while ((pak - pak_buffer) & 3) *pak++ = 0;
-
-			*(unsigned int *)pak = 0; pak += 4;
-		  } else {
-			tmp = (unsigned char *) Memory(raw_tmp + pak_tmp + 11, sizeof(char));
-
-			for (len = 0; len < raw_tmp; len++)
-			  tmp[len] = raw_buffer[len];
-
-			for (len = 0; len < pak_tmp; len++)
-			  tmp[raw_tmp + len] = pak_buffer[len + pak_len - pak_tmp];
-
-			pak = pak_buffer;
-			pak_buffer = tmp;
-
-			free(pak);
-
-			pak = pak_buffer + raw_tmp + pak_tmp;
-
-			enc_len = pak_tmp;
-			hdr_len = 8;
-			inc_len = raw_len - pak_tmp - raw_tmp;
-
-			while ((pak - pak_buffer) & 3) {
-			  *pak++ = 0xFF;
-			  hdr_len++;
+			while ((mask != 0) && (mask != 1)) {
+				mask = (byte)( ( (uint)mask ) >> ( (int)BLZ_SHIFT ) );
+				pak_buffer[flg] <<= 1;
 			}
 
-			*(unsigned int *)pak = enc_len + hdr_len; pak += 3;
-			*pak++ = hdr_len;
-			*(unsigned int *)pak = inc_len - hdr_len; pak += 4;
-		  }
+			pak_len = pak;
 
-		  *new_len = pak - pak_buffer;
+			BLZ_Invert(raw_buffer, 0, raw_len);
+			BLZ_Invert(pak_buffer, 0, pak_len);
 
-		  return(pak_buffer);
+			if ((pak_tmp == 0) || (raw_len + 4 < ((pak_tmp + raw_tmp + 3) & -4) + 8)) {
+				pak = 0;
+				raw = 0;
+				raw_end = raw_len;
+
+				while (raw < raw_end) {
+					pak_buffer[pak] = raw_buffer[raw];
+					pak++; raw++;
+				}
+
+				while ((pak & 3) != 0) {
+					pak_buffer[pak] = 0;
+					pak++;
+				}
+
+				pak_buffer[pak] = 0;
+				pak_buffer[pak+1] = 0;
+				pak_buffer[pak+2] = 0;
+				pak_buffer[pak+3] = 0;
+				pak += 4;
+			} else {
+				tmp = Memory((int)(raw_tmp + pak_tmp + 11), 1);
+
+				for (len = 0; len < raw_tmp; len++)
+					tmp[len] = raw_buffer[len];
+
+				for (len = 0; len < pak_tmp; len++)
+					tmp[raw_tmp + len] = pak_buffer[len + pak_len - pak_tmp];
+
+				pak = 0;
+				// !!! uuh this isn't exactly equivalent to the C code !!!
+				pak_buffer = tmp;
+
+				//free(pak);
+
+				pak = raw_tmp + pak_tmp;
+
+				enc_len = pak_tmp;
+				hdr_len = 8;
+				inc_len = raw_len - pak_tmp - raw_tmp;
+
+				while ((pak & 3) != 0) {
+					pak_buffer[pak] = 0xFF;
+					pak++;
+					hdr_len++;
+				}
+
+				//*(unsigned int *)pak = enc_len + hdr_len; pak += 3;
+				//*pak++ = hdr_len;
+				//*(unsigned int *)pak = inc_len - hdr_len; pak += 4;
+				byte[] tmpbyte = BitConverter.GetBytes( enc_len + hdr_len );
+				tmpbyte.CopyTo( pak_buffer, pak );
+				pak += 3;
+				pak_buffer[pak] = (byte)hdr_len;
+				pak++;
+				tmpbyte = BitConverter.GetBytes( inc_len - hdr_len );
+				tmpbyte.CopyTo( pak_buffer, pak );
+				pak += 4;
+			}
+
+			//*new_len = pak - pak_buffer;
+			new_len = pak;
+
+			return(pak_buffer);
 		}
 
 		/*----------------------------------------------------------------------------*/
