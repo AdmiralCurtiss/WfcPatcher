@@ -161,7 +161,7 @@ namespace WfcPatcher {
 			uint pak_len, raw_len, len, pos, inc_len, hdr_len, enc_len, dec_len;
 			byte flags = 0, mask;
 
-			Console.Write( "- decoding" );
+			//Console.Write( "- decoding" );
 
 			pak_len = (uint)pak_buffer.Length;
 
@@ -175,7 +175,7 @@ namespace WfcPatcher {
 				raw_len = dec_len;
 
 				fileWasNotCompressed = true;
-				Console.WriteLine();
+				//Console.WriteLine();
 				return pak_buffer;
 			} else {
 				if ( pak_len < 8 ) throw new Exception( "File has a bad header" );
@@ -250,7 +250,7 @@ namespace WfcPatcher {
 
 			//Save( filename + ".dec", raw_buffer, raw_len );
 
-			Console.WriteLine();
+			//Console.WriteLine();
 
 			return raw_buffer;
 		}
@@ -260,7 +260,7 @@ namespace WfcPatcher {
 			byte[] pak_buffer, new_buffer;
 			uint   raw_len, pak_len, new_len;
 
-			Console.Write("- encoding");
+			//Console.Write("- encoding");
 
 			raw_len = (uint)raw_buffer.Length;
 
@@ -283,7 +283,7 @@ namespace WfcPatcher {
 				pak_buffer = retbuf;
 			}
 
-			Console.WriteLine();
+			//Console.WriteLine();
 
 			return pak_buffer;
 		}

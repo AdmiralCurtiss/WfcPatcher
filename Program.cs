@@ -18,9 +18,10 @@ namespace WfcPatcher {
 		}
 
 		static void PatchFile( string filename ) {
-			Console.WriteLine( "Reading & Copying ROM..." );
+			Console.WriteLine( "Reading and copying " + filename + "..." );
 			var ndsSrc = new System.IO.FileStream( filename, System.IO.FileMode.Open );
-			var nds = new System.IO.FileStream( filename + ".wfc.nds", System.IO.FileMode.Create );
+			string newFilename = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( filename ), System.IO.Path.GetFileNameWithoutExtension( filename ) ) + " (AltWfc)" + System.IO.Path.GetExtension( filename );
+			var nds = new System.IO.FileStream( newFilename, System.IO.FileMode.Create );
 			Util.CopyStream( ndsSrc, nds, (int)ndsSrc.Length );
 			ndsSrc.Close();
 
@@ -36,6 +37,8 @@ namespace WfcPatcher {
 
 			PatchOverlay( nds, arm9overlayoff, arm9overlaylen );
 			PatchOverlay( nds, arm7overlayoff, arm7overlaylen );
+
+			Console.WriteLine();
 
 			nds.Close();
 		}
@@ -83,6 +86,7 @@ namespace WfcPatcher {
 				if ( ReplaceInData( decData ) ) {
 					// if something was replaced, put it back into the ROM
 					if ( compressed ) {
+						Console.WriteLine( "Replacing and recompressing overlay " + id + "..." );
 
 						uint newCompressedSize = 0;
 						data = blz.BLZ_Encode( decData, 0 );
@@ -93,6 +97,8 @@ namespace WfcPatcher {
 						nds.Write( newCompressedSizeBytes, 0, 3 );
 
 					} else {
+						Console.WriteLine( "Replacing overlay " + id + "..." );
+
 						data = decData;
 					}
 
