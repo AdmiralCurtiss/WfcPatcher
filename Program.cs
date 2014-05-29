@@ -27,6 +27,21 @@ namespace WfcPatcher {
 
 			// http://dsibrew.org/wiki/DSi_Cartridge_Header
 
+			// arm
+			Console.WriteLine( "Patching ARM Executables..." );
+			nds.Position = 0x20;
+			uint arm9offset = nds.ReadUInt32();
+			uint arm9entry = nds.ReadUInt32();
+			uint arm9load = nds.ReadUInt32();
+			uint arm9size = nds.ReadUInt32();
+			uint arm7offset = nds.ReadUInt32();
+			uint arm7entry = nds.ReadUInt32();
+			uint arm7load = nds.ReadUInt32();
+			uint arm7size = nds.ReadUInt32();
+
+			PatchArm9( nds, arm9offset, arm9size );
+			PatchArm7( nds, arm7offset, arm7size );
+
 			// overlays
 			Console.WriteLine( "Patching Overlays..." );
 			nds.Position = 0x50;
@@ -41,6 +56,58 @@ namespace WfcPatcher {
 			Console.WriteLine();
 
 			nds.Close();
+		}
+
+		static void PatchArm9( System.IO.FileStream nds, uint pos, uint len ) {
+			nds.Position = pos;
+			byte[] data = new byte[len];
+			nds.Read( data, 0, (int)len );
+
+			// TODO: Figure out if uncompressed ARM9s work with this.
+			//       (are there even uncompressed ARM9s?)
+			blz blz = new blz();
+			blz.arm9 = 1;
+			byte[] decData = blz.BLZ_Decode( data );
+			int decompressedSize = decData.Length;
+
+			if ( ReplaceInData( decData ) ) {
+				if ( data.Length == decompressedSize ) {
+					Console.WriteLine( "Replacing ARM9..." );
+					data = decData;
+				} else {
+					Console.WriteLine( "Replacing and recompressing ARM9..." );
+					data = blz.BLZ_Encode( decData, 0 );
+				}
+
+				nds.Position = pos;
+				nds.Write( data, 0, data.Length );
+
+				// padding
+				int newSize = data.Length;
+				int diff = (int)len - newSize;
+				for ( int j = 0; j < diff; ++j ) {
+					nds.WriteByte( 0xFF );
+				}
+
+				// write new size
+				byte[] newSizeBytes = BitConverter.GetBytes( newSize );
+				nds.Position = 0x2C;
+				nds.Write( newSizeBytes, 0, 4 );
+			}
+		}
+
+		static void PatchArm7( System.IO.FileStream nds, uint pos, uint len ) {
+			nds.Position = pos;
+			byte[] data = new byte[len];
+			nds.Read( data, 0, (int)len );
+
+			if ( ReplaceInData( data ) ) {
+				Console.WriteLine( "Replacing ARM7..." );
+				nds.Position = pos;
+				nds.Write( data, 0, data.Length );
+			}
+
+			return;
 		}
 
 		static void PatchOverlay( System.IO.FileStream nds, uint pos, uint len ) {
