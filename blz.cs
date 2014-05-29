@@ -247,41 +247,42 @@ namespace WfcPatcher {
 			Console.WriteLine();
 		}
 
-		/*----------------------------------------------------------------------------
-		void BLZ_Encode(char *filename, int mode) {
-		  unsigned char *raw_buffer, *pak_buffer, *new_buffer;
-		  unsigned int   raw_len, pak_len, new_len;
+		//*----------------------------------------------------------------------------
+		public void BLZ_Encode(string filename, uint mode) {
+			byte[] raw_buffer, pak_buffer, new_buffer;
+			uint   raw_len, pak_len, new_len;
 
-		  printf("- encoding '%s'", filename);
+			Console.Write("- encoding '%s'", filename);
 
-		  raw_buffer = Load(filename, &raw_len, RAW_MINIM, RAW_MAXIM);
+			raw_buffer = Load(filename, out raw_len, RAW_MINIM, RAW_MAXIM);
 
-		  pak_buffer = NULL;
-		  pak_len = BLZ_MAXIM + 1;
+			pak_buffer = null;
+			pak_len = BLZ_MAXIM + 1;
 
-		  new_buffer = BLZ_Code(raw_buffer, raw_len, &new_len, mode);
-		  if (new_len < pak_len) {
-			if (pak_buffer != NULL) free(pak_buffer);
-			pak_buffer = new_buffer;
-			pak_len = new_len;
-		  }
+			new_buffer = BLZ_Code(raw_buffer, raw_len, out new_len, mode);
+			if (new_len < pak_len) {
+				pak_buffer = new_buffer;
+				pak_len = new_len;
+			}
 
-		  Save(filename, pak_buffer, pak_len);
+			Save(filename + ".enc", pak_buffer, pak_len);
 
-		  free(pak_buffer);
-		  free(raw_buffer);
-
-		  printf("\n");
+			Console.WriteLine();
 		}
 
-		/*----------------------------------------------------------------------------
-		char *BLZ_Code(unsigned char *raw_buffer, int raw_len, int *new_len, int best) {
-		  unsigned char *pak_buffer, *pak, *raw, *raw_end, *flg, *tmp;
-		  unsigned int   pak_len, inc_len, hdr_len, enc_len, len, pos, max;
-		  unsigned int   len_best, pos_best, len_next, pos_next, len_post, pos_post;
-		  unsigned int   pak_tmp, raw_tmp, raw_new;
-		  unsigned short crc;
-		  unsigned char  mask;
+		//*----------------------------------------------------------------------------
+		byte[] BLZ_Code( byte[] raw_buffer, uint raw_len, out uint new_len, uint best ) {
+			byte[] pak_buffer; 
+			uint   pak, raw, raw_end, flg, tmp;
+			uint   pak_len, inc_len, hdr_len, enc_len, len, pos, max;
+			uint   len_best, pos_best, len_next, pos_next, len_post, pos_post;
+			uint   pak_tmp, raw_tmp, raw_new;
+			ushort crc;
+			byte   mask;
+			
+			new_len = 0;
+			return new byte[0];
+		}	/*
 
 		#define SEARCH(l,p) { \
 		  l = BLZ_THRESHOLD;                                          \
