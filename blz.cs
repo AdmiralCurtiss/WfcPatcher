@@ -318,11 +318,13 @@ namespace WfcPatcher {
 				} else if (BitConverter.ToUInt16(raw_buffer, 0x7FE) != 0) {
 					Console.Write(", WARNING: invalid Secure Area 2KB end, switch [9] disabled");
 				} else {
-					//crc = (unsigned short)BLZ_CRC16(raw_buffer + 0x10, 0x07F0);
-					//if (*(unsigned short *)(raw_buffer + 0x0E) != crc) {
-					//	Console.Write(", WARNING: CRC16 Secure Area 2KB do not match");
-					//	*(unsigned short *)(raw_buffer + 0x0E) = crc;
-					//}
+					crc = BLZ_CRC16(raw_buffer, 0x10, 0x07F0);
+					byte[] crcbytes = BitConverter.GetBytes( crc );
+					if (!(raw_buffer[0x0E] == crcbytes[0] && raw_buffer[0x0F] == crcbytes[1])) {
+						Console.Write(", WARNING: CRC16 Secure Area 2KB do not match");
+						raw_buffer[0x0E] = crcbytes[0];
+						raw_buffer[0x0F] = crcbytes[1];
+					}
 					raw_new -= 0x4000;
 				}
 			}
@@ -470,22 +472,25 @@ namespace WfcPatcher {
 
 		/*----------------------------------------------------------------------------*/
 
-		/*----------------------------------------------------------------------------
-		short BLZ_CRC16(unsigned char *buffer, unsigned int length) {
-		  unsigned short crc;
-		  unsigned int   nbits;
+		//*----------------------------------------------------------------------------
+		ushort BLZ_CRC16(byte[] buffer, uint bloc, uint length) {
+			ushort crc;
+			uint   nbits;
 
-		  crc = 0xFFFF;
-		  while (length--) {
-			crc ^= *buffer++;
-			nbits = 8;
-			while (nbits--) {
-			  if (crc & 1) { crc = (crc >> 1) ^ 0xA001; }
-			  else           crc =  crc >> 1;
+			crc = 0xFFFF;
+			while ((length--) != 0) {
+				crc ^= buffer[bloc++];
+				nbits = 8;
+				while ((nbits--) != 0) {
+					if ( ( crc & 1 ) != 0 ) {
+						crc = (ushort)(( crc >> 1 ) ^ 0xA001);
+					} else {
+						crc = (ushort)(crc >> 1);
+					}
+				}
 			}
-		  }
 
-		  return(crc);
+			return(crc);
 		}
 
 		/*----------------------------------------------------------------------------*/
