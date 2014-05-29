@@ -8,7 +8,8 @@ namespace WfcPatcher {
 		static void Main( string[] args ) {
 			foreach ( string s in args ) {
 				try {
-					PatchFile( s );
+					string newFilename = PatchFile( s );
+					Console.WriteLine( "Successfully patched to " + newFilename + "!" );
 				} catch ( Exception ex ) {
 					Console.WriteLine( "Failed patching " + s );
 					Console.WriteLine( ex.ToString() );
@@ -17,7 +18,7 @@ namespace WfcPatcher {
 			}
 		}
 
-		static void PatchFile( string filename ) {
+		static string PatchFile( string filename ) {
 			Console.WriteLine( "Reading and copying " + filename + "..." );
 			var ndsSrc = new System.IO.FileStream( filename, System.IO.FileMode.Open );
 			string newFilename = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( filename ), System.IO.Path.GetFileNameWithoutExtension( filename ) ) + " (AltWfc)" + System.IO.Path.GetExtension( filename );
@@ -56,6 +57,8 @@ namespace WfcPatcher {
 			Console.WriteLine();
 
 			nds.Close();
+
+			return newFilename;
 		}
 
 		static void PatchArm9( System.IO.FileStream nds, uint pos, uint len ) {
