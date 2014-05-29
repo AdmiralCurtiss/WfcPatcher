@@ -7,14 +7,20 @@ namespace WfcPatcher {
 	class Program {
 		static void Main( string[] args ) {
 			foreach ( string s in args ) {
+#if DEBUG
+#else
 				try {
+#endif
 					string newFilename = PatchFile( s );
-					Console.WriteLine( "Successfully patched to " + newFilename + "!" );
+					Console.WriteLine( "Patched to " + newFilename + "!" );
+#if DEBUG
+#else
 				} catch ( Exception ex ) {
 					Console.WriteLine( "Failed patching " + s );
 					Console.WriteLine( ex.ToString() );
 					Console.WriteLine();
 				}
+#endif
 			}
 		}
 
@@ -167,6 +173,9 @@ namespace WfcPatcher {
 
 
 				if ( ReplaceInData( decData ) ) {
+					int newOverlaySize;
+					int diff;
+
 					// if something was replaced, put it back into the ROM
 					if ( compressed ) {
 						Console.WriteLine( "Replacing and recompressing overlay " + id + "..." );
@@ -174,6 +183,25 @@ namespace WfcPatcher {
 						uint newCompressedSize = 0;
 						data = blz.BLZ_Encode( decData, 0 );
 						newCompressedSize = (uint)data.Length;
+
+						newOverlaySize = data.Length;
+						diff = (int)overlaySize - newOverlaySize;
+
+						if ( diff < 0 ) {
+							Console.WriteLine( "WARNING: New file bigger than old one!" );
+							Console.WriteLine( "Attempting to recover by removing known debug strings!" );
+							decData = RemoveDebugStrings( decData );
+							data = blz.BLZ_Encode( decData, 0 );
+							newCompressedSize = (uint)data.Length;
+
+							newOverlaySize = data.Length;
+							diff = (int)overlaySize - newOverlaySize;
+							if ( diff < 0 ) {
+								Console.WriteLine( "Recovery failed, this will probably not patch right!" );
+							} else {
+								Console.WriteLine( "Recovery successful." );
+							}
+						}
 
 						// replace compressed size, if it was used before
 						if ( compressedSize == overlaySize ) {
@@ -188,14 +216,15 @@ namespace WfcPatcher {
 						data = decData;
 					}
 
+					newOverlaySize = data.Length;
+					diff = (int)overlaySize - newOverlaySize;
+
 					nds.Position = overlayPositionStart;
 					nds.Write( data, 0, data.Length );
 
 					overlayPositionEnd = (uint)nds.Position;
 
 					// padding
-					int newOverlaySize = data.Length;
-					int diff = (int)overlaySize - newOverlaySize;
 					for ( int j = 0; j < diff; ++j ) {
 						nds.WriteByte( 0xFF );
 					}
@@ -207,6 +236,27 @@ namespace WfcPatcher {
 				}
 
 			}
+		}
+
+		static byte[] RemoveDebugStrings( byte[] data ) {
+			string[] debugStrings = new string[] {
+				"recv buffer size",
+				"send buffer size",
+				"unknown connect mode",
+			};
+
+			foreach ( string s in debugStrings ) {
+				byte[] searchBytes = Encoding.ASCII.GetBytes( s );
+				var results = data.Locate( searchBytes );
+
+				foreach ( int result in results ) {
+					for ( int i = 0; i < searchBytes.Length; ++i ) {
+						data[result + i] = 0x20;
+					}
+				}
+			}
+
+			return data;
 		}
 
 		static bool ReplaceInData( byte[] data ) {
