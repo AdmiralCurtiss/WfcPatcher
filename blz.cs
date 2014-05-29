@@ -153,7 +153,7 @@ namespace WfcPatcher {
 		}
 
 		/*----------------------------------------------------------------------------*/
-		void BLZ_Decode( string filename ) {
+		public void BLZ_Decode( string filename ) {
 			byte[] pak_buffer, raw_buffer;
 			uint pak, raw, pak_end, raw_end;
 			uint pak_len, raw_len, len, pos, inc_len, hdr_len, enc_len, dec_len;
@@ -196,6 +196,9 @@ namespace WfcPatcher {
 
 			BLZ_Invert( pak_buffer, dec_len, pak_len );
 
+			//Save( "init_pak", pak_buffer, pak_len );
+			//Save( "init_raw", raw_buffer, raw_len );
+
 			mask = 0;
 
 			while ( raw < raw_end ) {
@@ -209,6 +212,7 @@ namespace WfcPatcher {
 
 				if ( ( flags & mask ) == 0 ) {
 					if ( pak == pak_end ) break;
+					//Console.WriteLine( "C# Copy pak " + pak + " to raw " + raw );
 					raw_buffer[raw++] = pak_buffer[pak++];
 				} else {
 					if ( pak + 1 >= pak_end ) break;
@@ -220,17 +224,25 @@ namespace WfcPatcher {
 						len = raw_end - raw;
 					}
 					pos = ( pos & 0xFFF ) + 3;
-					while ( len-- != 0 ) raw_buffer[raw++] = raw_buffer[raw - pos];
+					while ( len-- != 0 ) {
+						//Console.WriteLine( "C# Copy raw " + (raw - pos) + " to raw " + raw );
+						raw_buffer[raw] = raw_buffer[raw - pos];
+						raw++;
+					}
 				}
 			}
 
+			//Save( "post_pak", pak_buffer, pak_len );
+			//Save( "post_raw", raw_buffer, raw_len );
 			BLZ_Invert( raw_buffer, dec_len, raw_len - dec_len );
+			//Save( "posti_pak", pak_buffer, pak_len );
+			//Save( "posti_raw", raw_buffer, raw_len );
 
 			raw_len = raw;
 
 			if ( raw != raw_end ) Console.Write( ", WARNING: unexpected end of encoded file!" );
 
-			Save( filename, raw_buffer, raw_len );
+			Save( filename + ".dec", raw_buffer, raw_len );
 
 			Console.WriteLine();
 		}
