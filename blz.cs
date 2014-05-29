@@ -49,7 +49,8 @@ namespace WfcPatcher {
 		// 0x00FFFFFF + 0x00200000 + 12 + padding
 
 		/*----------------------------------------------------------------------------*/
-		public static int arm9;
+		public int arm9;
+		public bool fileWasNotCompressed = false;
 
 		/*----------------------------------------------------------------------------*/
 		/*#define BREAK(text)   { printf(text); return; }
@@ -154,6 +155,7 @@ namespace WfcPatcher {
 
 		/*----------------------------------------------------------------------------*/
 		public byte[] BLZ_Decode( byte[] pak_buffer ) {
+			fileWasNotCompressed = false;
 			byte[] raw_buffer;
 			uint pak, raw, pak_end, raw_end;
 			uint pak_len, raw_len, len, pos, inc_len, hdr_len, enc_len, dec_len;
@@ -171,6 +173,9 @@ namespace WfcPatcher {
 				dec_len = pak_len;
 				pak_len = 0;
 				raw_len = dec_len;
+
+				fileWasNotCompressed = true;
+				return pak_buffer;
 			} else {
 				if ( pak_len < 8 ) throw new Exception( "File has a bad header" );
 				hdr_len = pak_buffer[pak_len - 5];
