@@ -140,24 +140,24 @@ namespace WfcPatcher {
 				int newSize = data.Length;
 				int diff = (int)len - newSize;
 				
-				/*
 				// copy back footer
 				if ( diff > 0 ) {
 					List<byte> footer = new List<byte>();
 					nds.Position = pos + len;
-					while ( nds.PeekUInt32() != 0xFFFFFFFF ) {
-						for ( int i = 0; i < 4; ++i ) { footer.Add( (byte)nds.ReadByte() ); }
+					if ( nds.PeekUInt32() == 0xDEC00621 ) {
+						for ( int j = 0; j < 12; ++j ) {
+							footer.Add( (byte)nds.ReadByte() );
+						}
+
+						nds.Position = pos + newSize;
+						nds.Write( footer.ToArray(), 0, footer.Count );
 					}
 
-					nds.Position = pos + newSize;
-					nds.Write( footer.ToArray(), 0, footer.Count );
+					// padding
+					for ( int j = 0; j < diff; ++j ) {
+						nds.WriteByte( 0xFF );
+					}
 				}
-
-				// padding
-				for ( int j = 0; j < diff; ++j ) {
-					nds.WriteByte( 0xFF );
-				}
-				*/
 
 				// write new size
 				byte[] newSizeBytes = BitConverter.GetBytes( newSize );
