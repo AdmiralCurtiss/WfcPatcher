@@ -75,27 +75,29 @@ namespace WfcPatcher {
 			// decompress size info: http://www.crackerscrap.com/docs/dsromstructure.html
 			// TODO: Is there a better way to figure out if an ARM9 is compressed?
 
-			nds.Position = nds.Position - 4;
+			nds.Position = nds.Position - 8;
+			uint compressedSize = nds.ReadUInt24();
+			nds.ReadByte();
 			uint additionalCompressedSize = nds.ReadUInt32();
 			uint decompressedSize = additionalCompressedSize + len;
 
-			bool compressed;
-			byte[] decData;
+			bool compressed = false;
+			byte[] decData = data;
 
 			blz blz = new blz();
-			try {
-				blz.arm9 = 1;
-				decData = blz.BLZ_Decode( data );
+			// if this condition isn't true then it can't be blz-compressed so don't even try
+			if ( data.Length == compressedSize + 0x4000 ) {
+				try {
+					blz.arm9 = 1;
+					byte[] maybeDecData = blz.BLZ_Decode( data );
 
-				if ( decData.Length == decompressedSize ) {
-					compressed = true;
-				} else {
-					decData = data;
+					if ( decData.Length == decompressedSize ) {
+						compressed = true;
+						decData = maybeDecData;
+					}
+				} catch ( Exception ) {
 					compressed = false;
 				}
-			} catch ( Exception ) {
-				decData = data;
-				compressed = false;
 			}
 
 			if ( ReplaceInData( decData ) ) {
