@@ -122,6 +122,20 @@ namespace WfcPatcher {
 						newCompressedSize = (uint)data.Length;
 					}
 
+					if ( newCompressedSize != len ) {
+						// new ARM is (still) different, attempt to find the metadata in the ARM9 secure area and replace that
+						byte[] newCmpSizeBytes = BitConverter.GetBytes( newCompressedSize );
+						for ( int i = 0; i < 0x4000; i += 4 ) {
+							uint maybeSize = BitConverter.ToUInt32( data, i );
+							if ( maybeSize == len + 0x02000000 ) {
+								data[i + 0] = newCmpSizeBytes[0];
+								data[i + 1] = newCmpSizeBytes[1];
+								data[i + 2] = newCmpSizeBytes[2];
+								data[i + 3] = (byte)( newCmpSizeBytes[3] + 0x02 );
+								break;
+							}
+						}
+					}
 #if DEBUG
 					uint newDecompressedSize = (uint)decData.Length;
 					uint newAdditionalCompressedSize = newDecompressedSize - newCompressedSize;
