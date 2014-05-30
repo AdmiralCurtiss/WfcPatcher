@@ -84,6 +84,13 @@ namespace WfcPatcher {
 			bool compressed = false;
 			byte[] decData = data;
 
+#if DEBUG
+			Console.WriteLine( "ARM9 old dec size: 0x" + decompressedSize.ToString( "X6" ) );
+			Console.WriteLine( "ARM9 old cmp size: 0x" + compressedSize.ToString( "X6" ) );
+			Console.WriteLine( "ARM9 old filesize: 0x" + len.ToString( "X6" ) );
+			Console.WriteLine( "ARM9 old diff:     0x" + additionalCompressedSize.ToString( "X6" ) );
+#endif
+
 			blz blz = new blz();
 			// if this condition isn't true then it can't be blz-compressed so don't even try
 			if ( data.Length == compressedSize + 0x4000 || data.Length == compressedSize + 0x4004 ) {
@@ -100,10 +107,28 @@ namespace WfcPatcher {
 				}
 			}
 
-			if ( ReplaceInData( decData ) ) {
+			byte[] decDataUnmodified = (byte[])decData.Clone();
+			if ( ReplaceInData( decData, 0x00, true ) ) {
 				if ( compressed ) {
 					Console.WriteLine( "Replacing and recompressing ARM9..." );
 					data = blz.BLZ_Encode( decData, 0 );
+
+					uint newCompressedSize = (uint)data.Length;
+					if ( newCompressedSize > len ) {
+						// new ARM is actually bigger, redo without the additional nullterm replacement
+						decData = decDataUnmodified;
+						ReplaceInData( decData, 0x00, false );
+						data = blz.BLZ_Encode( decData, 0 );
+						newCompressedSize = (uint)data.Length;
+					}
+
+#if DEBUG
+					uint newDecompressedSize = (uint)decData.Length;
+					uint newAdditionalCompressedSize = newDecompressedSize - newCompressedSize;
+					Console.WriteLine( "ARM9 new dec size: 0x" + newDecompressedSize.ToString( "X6" ) );
+					Console.WriteLine( "ARM9 new cmp size: 0x" + newCompressedSize.ToString( "X6" ) );
+					Console.WriteLine( "ARM9 new diff:     0x" + newAdditionalCompressedSize.ToString( "X6" ) );
+#endif
 				} else {
 					Console.WriteLine( "Replacing ARM9..." );
 					data = decData;
@@ -115,6 +140,7 @@ namespace WfcPatcher {
 				int newSize = data.Length;
 				int diff = (int)len - newSize;
 				
+				/*
 				// copy back footer
 				if ( diff > 0 ) {
 					List<byte> footer = new List<byte>();
@@ -131,6 +157,7 @@ namespace WfcPatcher {
 				for ( int j = 0; j < diff; ++j ) {
 					nds.WriteByte( 0xFF );
 				}
+				*/
 
 				// write new size
 				byte[] newSizeBytes = BitConverter.GetBytes( newSize );
@@ -282,7 +309,7 @@ namespace WfcPatcher {
 			return data;
 		}
 
-		static bool ReplaceInData( byte[] data ) {
+		static bool ReplaceInData( byte[] data, byte paddingByte = 0x00, bool writeAdditionalBytePostString = false ) {
 			bool replacedData = false;
 			string search = "https://";
 			string replace = "http://";
@@ -311,7 +338,19 @@ namespace WfcPatcher {
 					data[result + i] = replacedStringBytes[i];
 				}
 				for ( ; i < replacedStringBytes.Length + requiredPadding; ++i ) {
-					data[result + i] = 0x00;
+					data[result + i] = paddingByte;
+				}
+
+				// Alright, this might require some explaination.
+				// This is putting a byte in the location that previously held the NULL terminator at the end of the string.
+				// Thanks to "http" being one byte shorter than "https", the new NULL terminator was just placed in the
+				// padding loop above, and the byte below, at [result + i], is unused. Thus, we can just place anything in
+				// there without affecting the program. Now, the actual *reason* we're putting a byte in here is to reduce
+				// the chance of the recompressed binary becoming smaller than the original one. We want it to remain the
+				// exact same size. Now, of course, this is not always going to happen, but this should improve the chance
+				// significantly.
+				if ( writeAdditionalBytePostString ) {
+					data[result + i] = 0x7F;
 				}
 			}
 
