@@ -86,12 +86,12 @@ namespace WfcPatcher {
 
 			blz blz = new blz();
 			// if this condition isn't true then it can't be blz-compressed so don't even try
-			if ( data.Length == compressedSize + 0x4000 ) {
+			if ( data.Length == compressedSize + 0x4000 || data.Length == compressedSize + 0x4004 ) {
 				try {
 					blz.arm9 = 1;
 					byte[] maybeDecData = blz.BLZ_Decode( data );
 
-					if ( decData.Length == decompressedSize ) {
+					if ( maybeDecData.Length == decompressedSize ) {
 						compressed = true;
 						decData = maybeDecData;
 					}
@@ -112,10 +112,10 @@ namespace WfcPatcher {
 				nds.Position = pos;
 				nds.Write( data, 0, data.Length );
 
-				// copy back footer
 				int newSize = data.Length;
 				int diff = (int)len - newSize;
-
+				
+				// copy back footer
 				if ( diff > 0 ) {
 					List<byte> footer = new List<byte>();
 					nds.Position = pos + len;
@@ -283,6 +283,7 @@ namespace WfcPatcher {
 		}
 
 		static bool ReplaceInData( byte[] data ) {
+			bool replacedData = false;
 			string search = "https://";
 			string replace = "http://";
 			byte[] searchBytes = Encoding.ASCII.GetBytes( search );
@@ -296,9 +297,14 @@ namespace WfcPatcher {
 
 			foreach ( int result in results ) {
 				string originalString = Util.GetTextAscii( data, result );
+#if DEBUG
+				Console.WriteLine( originalString );
+#endif
 				if ( originalString == "https://" ) { continue; } // don't replace lone https, probably used for strcmp to figure out if an URL is SSL or not
 				string replacedString = originalString.Replace( search, replace );
 				byte[] replacedStringBytes = Encoding.ASCII.GetBytes( replacedString );
+
+				replacedData = true;
 
 				int i = 0;
 				for ( ; i < replacedStringBytes.Length; ++i ) {
@@ -309,7 +315,7 @@ namespace WfcPatcher {
 				}
 			}
 
-			return true;
+			return replacedData;
 		}
 	}
 }
