@@ -177,6 +177,16 @@ namespace WfcPatcher {
 				byte[] newSizeBytes = BitConverter.GetBytes( newSize );
 				nds.Position = 0x2C;
 				nds.Write( newSizeBytes, 0, 4 );
+
+				// recalculate checksums
+				nds.Position = pos;
+				ushort secureChecksum = new Crc16().ComputeChecksum( nds, 0x4000, 0xFFFF );
+				nds.Position = 0x6C;
+				nds.Write( BitConverter.GetBytes( secureChecksum ), 0, 2 );
+
+				nds.Position = 0;
+				ushort headerChecksum = new Crc16().ComputeChecksum( nds, 0x15E, 0xFFFF );
+				nds.Write( BitConverter.GetBytes( headerChecksum ), 0, 2 );
 			}
 		}
 
