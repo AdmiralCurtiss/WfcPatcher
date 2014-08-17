@@ -13,6 +13,7 @@ namespace WfcPatcher {
 #endif
 					string newFilename = PatchFile( s );
 					Console.WriteLine( "Patched to " + newFilename + "!" );
+					Console.WriteLine();
 #if DEBUG
 #else
 				} catch ( Exception ex ) {
@@ -59,8 +60,6 @@ namespace WfcPatcher {
 
 			PatchOverlay( nds, arm9overlayoff, arm9overlaylen );
 			PatchOverlay( nds, arm7overlayoff, arm7overlaylen );
-
-			Console.WriteLine();
 
 			nds.Close();
 
@@ -120,6 +119,12 @@ namespace WfcPatcher {
 						ReplaceInData( decData, 0x00, false );
 						data = blz.BLZ_Encode( decData, 0 );
 						newCompressedSize = (uint)data.Length;
+
+						int arm9diff = (int)len - (int)newCompressedSize;
+						if ( arm9diff < 0 ) {
+							Console.WriteLine( "WARNING: Recompressed ARM9 is " + -arm9diff + " bytes bigger than original!" );
+							Console.WriteLine( "         Patched game may be corrupted!" );
+						}
 					}
 
 					if ( newCompressedSize != len ) {
@@ -262,8 +267,7 @@ namespace WfcPatcher {
 						diff = (int)overlaySize - newOverlaySize;
 
 						if ( diff < 0 ) {
-							Console.WriteLine( "WARNING: New file bigger than old one!" );
-							Console.WriteLine( "Attempting to recover by removing known debug strings!" );
+							Console.WriteLine( "Removing known debug strings and recompressing overlay " + id + "..." );
 							decData = RemoveDebugStrings( decData );
 							data = blz.BLZ_Encode( decData, 0 );
 							newCompressedSize = (uint)data.Length;
@@ -271,9 +275,8 @@ namespace WfcPatcher {
 							newOverlaySize = data.Length;
 							diff = (int)overlaySize - newOverlaySize;
 							if ( diff < 0 ) {
-								Console.WriteLine( "Recovery failed, this will probably not patch right!" );
-							} else {
-								Console.WriteLine( "Recovery successful." );
+								Console.WriteLine( "WARNING: Recompressed overlay is " + -diff + " bytes bigger than original!" );
+								Console.WriteLine( "         Patched game may be corrupted!" );
 							}
 						}
 
@@ -317,6 +320,10 @@ namespace WfcPatcher {
 				"recv buffer size",
 				"send buffer size",
 				"unknown connect mode",
+				"Split packet parse error",
+				"NULL byte expected!",
+				"Processing adderror packet",
+				"Out of memory.",
 			};
 
 			foreach ( string s in debugStrings ) {
