@@ -122,8 +122,16 @@ namespace WfcPatcher {
 
 						int arm9diff = (int)len - (int)newCompressedSize;
 						if ( arm9diff < 0 ) {
-							Console.WriteLine( "WARNING: Recompressed ARM9 is " + -arm9diff + " bytes bigger than original!" );
-							Console.WriteLine( "         Patched game may be corrupted!" );
+							// still too big, remove debug strings
+							decData = RemoveDebugStrings( decData );
+							data = blz.BLZ_Encode( decData, 0 );
+							newCompressedSize = (uint)data.Length;
+
+							arm9diff = (int)len - (int)newCompressedSize;
+							if ( arm9diff < 0 ) {
+								Console.WriteLine( "WARNING: Recompressed ARM9 is " + -arm9diff + " bytes bigger than original!" );
+								Console.WriteLine( "         Patched game may be corrupted!" );
+							}
 						}
 					}
 
@@ -324,6 +332,7 @@ namespace WfcPatcher {
 				"NULL byte expected!",
 				"Processing adderror packet",
 				"Out of memory.",
+				" buf->buffer",
 			};
 
 			foreach ( string s in debugStrings ) {
