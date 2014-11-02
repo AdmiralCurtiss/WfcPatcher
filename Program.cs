@@ -11,9 +11,15 @@ namespace WfcPatcher {
 #if !DEBUG
 				try {
 #endif
-					PatchFile( filename, newFilename );
-					Console.WriteLine( "Patched to " + newFilename + "!" );
-					Console.WriteLine();
+					if ( PatchFile( filename, newFilename ) ) {
+						Console.WriteLine( "Patched to " + newFilename + "!" );
+						Console.WriteLine();
+					} else {
+						Console.WriteLine( "Found nothing to patch in " + filename + "." );
+						Console.WriteLine( "Are you sure this is a WFC-enabled game?" );
+						Console.WriteLine();
+						System.IO.File.Delete( newFilename );
+					}
 #if !DEBUG
 				} catch ( Exception ex ) {
 					Console.WriteLine( "Failed patching " + filename );
@@ -33,7 +39,7 @@ namespace WfcPatcher {
 			return gamecode;
 		}
 
-		static void PatchFile( string filename, string newFilename ) {
+		static bool PatchFile( string filename, string newFilename ) {
 			Console.WriteLine( "Reading and copying " + filename + "..." );
 			var ndsSrc = new System.IO.FileStream( filename, System.IO.FileMode.Open );
 			var nds = new System.IO.FileStream( newFilename, System.IO.FileMode.Create );
@@ -54,8 +60,8 @@ namespace WfcPatcher {
 			uint arm7load = nds.ReadUInt32();
 			uint arm7size = nds.ReadUInt32();
 
-			PatchArm9( nds, arm9offset, arm9size );
-			PatchArm7( nds, arm7offset, arm7size );
+			bool modArm9 = PatchArm9( nds, arm9offset, arm9size );
+			bool modArm7 = PatchArm7( nds, arm7offset, arm7size );
 
 			// overlays
 			Console.WriteLine( "Patching Overlays..." );
@@ -65,13 +71,15 @@ namespace WfcPatcher {
 			uint arm7overlayoff = nds.ReadUInt32();
 			uint arm7overlaylen = nds.ReadUInt32();
 
-			PatchOverlay( nds, arm9overlayoff, arm9overlaylen );
-			PatchOverlay( nds, arm7overlayoff, arm7overlaylen );
+			bool modOvl9 = PatchOverlay( nds, arm9overlayoff, arm9overlaylen );
+			bool modOvl7 = PatchOverlay( nds, arm7overlayoff, arm7overlaylen );
 
 			nds.Close();
+
+			return modArm9 || modArm7 || modOvl9 || modOvl7;
 		}
 
-		static void PatchArm9( System.IO.FileStream nds, uint pos, uint len ) {
+		static bool PatchArm9( System.IO.FileStream nds, uint pos, uint len ) {
 			nds.Position = pos;
 			byte[] data = new byte[len];
 			nds.Read( data, 0, (int)len );
@@ -218,10 +226,14 @@ namespace WfcPatcher {
 				nds.Position = 0;
 				ushort headerChecksum = new Crc16().ComputeChecksum( nds, 0x15E, 0xFFFF );
 				nds.Write( BitConverter.GetBytes( headerChecksum ), 0, 2 );
+
+				return true;
 			}
+
+			return false;
 		}
 
-		static void PatchArm7( System.IO.FileStream nds, uint pos, uint len ) {
+		static bool PatchArm7( System.IO.FileStream nds, uint pos, uint len ) {
 			nds.Position = pos;
 			byte[] data = new byte[len];
 			nds.Read( data, 0, (int)len );
@@ -230,12 +242,14 @@ namespace WfcPatcher {
 				Console.WriteLine( "Replacing ARM7..." );
 				nds.Position = pos;
 				nds.Write( data, 0, data.Length );
+				
+				return true;
 			}
 
-			return;
+			return false;
 		}
 
-		static void PatchOverlay( System.IO.FileStream nds, uint pos, uint len ) {
+		static bool PatchOverlay( System.IO.FileStream nds, uint pos, uint len ) {
 			// http://sourceforge.net/p/devkitpro/ndstool/ci/master/tree/source/ndsextract.cpp
 			// http://sourceforge.net/p/devkitpro/ndstool/ci/master/tree/source/overlay.h
 			// header compression info from http://gbatemp.net/threads/recompressing-an-overlay-file.329576/
@@ -243,6 +257,7 @@ namespace WfcPatcher {
 			nds.Position = 0x048;
 			uint fatOffset = nds.ReadUInt32();
 
+			bool modified = false;
 			for ( uint i = 0; i < len; i += 0x20 ) {
 				nds.Position = pos + i;
 				uint id = nds.ReadUInt32();
@@ -278,6 +293,7 @@ namespace WfcPatcher {
 
 
 				if ( ReplaceInData( decData ) ) {
+					modified = true;
 					int newOverlaySize;
 					int diff;
 
@@ -337,8 +353,9 @@ namespace WfcPatcher {
 					nds.Position = fatOffset + 8 * id + 4;
 					nds.Write( newPosEndData, 0, 4 );
 				}
-
 			}
+			
+			return modified;
 		}
 
 		static void RemoveDebugStrings( byte[] data ) {
