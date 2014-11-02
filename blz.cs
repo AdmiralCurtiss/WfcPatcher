@@ -339,7 +339,10 @@ namespace WfcPatcher {
 					crc = BLZ_CRC16(raw_buffer, 0x10, 0x07F0);
 					byte[] crcbytes = BitConverter.GetBytes( crc );
 					if (!(raw_buffer[0x0E] == crcbytes[0] && raw_buffer[0x0F] == crcbytes[1])) {
-						Console.WriteLine("WARNING: CRC16 Secure Area 2KB do not match");
+						Console.WriteLine( "NOTICE: CRC16 Secure Area 2KB do not match" );
+						Console.WriteLine( "        This may be indicative of a bad dump." );
+						Console.WriteLine( "        If you're patching a modified ROM, such as a hack or" );
+						Console.WriteLine( "        fan-translation, you can safely ignore this." );
 						raw_buffer[0x0E] = crcbytes[0];
 						raw_buffer[0x0F] = crcbytes[1];
 					}
