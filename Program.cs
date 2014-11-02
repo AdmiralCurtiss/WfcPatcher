@@ -25,6 +25,14 @@ namespace WfcPatcher {
 			}
 		}
 
+		public static string GetGamecode( System.IO.FileStream nds ) {
+			long pos = nds.Position;
+			nds.Position = 0x0C;
+			string gamecode = nds.ReadAscii( 4 );
+			nds.Position = pos;
+			return gamecode;
+		}
+
 		static string PatchFile( string filename ) {
 			Console.WriteLine( "Reading and copying " + filename + "..." );
 			var ndsSrc = new System.IO.FileStream( filename, System.IO.FileMode.Open );
@@ -128,7 +136,9 @@ namespace WfcPatcher {
 						int arm9diff = (int)len - (int)newCompressedSize;
 						if ( arm9diff < 0 ) {
 							// still too big, remove debug strings
-							decData = RemoveDebugStrings( decData );
+							if ( !RemoveStringsInKnownGames( GetGamecode( nds ), decData ) ) {
+								RemoveDebugStrings( decData );
+							}
 #if DEBUG
 							System.IO.File.WriteAllBytes( "arm9-dec-without-debug.bin", decData );
 #endif
@@ -287,7 +297,7 @@ namespace WfcPatcher {
 
 						if ( diff < 0 ) {
 							Console.WriteLine( "Removing known debug strings and recompressing overlay " + id + "..." );
-							decData = RemoveDebugStrings( decData );
+							RemoveDebugStrings( decData );
 							data = blz.BLZ_Encode( decData, 0 );
 							newCompressedSize = (uint)data.Length;
 
@@ -334,7 +344,7 @@ namespace WfcPatcher {
 			}
 		}
 
-		static byte[] RemoveDebugStrings( byte[] data ) {
+		static void RemoveDebugStrings( byte[] data ) {
 			string[] debugStrings = new string[] {
 				"recv buffer size",
 				"send buffer size",
@@ -356,8 +366,38 @@ namespace WfcPatcher {
 					}
 				}
 			}
+		}
 
-			return data;
+		class KnownGamedata {
+			public string Gamecode;
+			public uint Position;
+			public uint Length;
+
+			public KnownGamedata( string gamecode, uint position, uint length ) {
+				this.Gamecode = gamecode;
+				this.Position = position;
+				this.Length = length;
+			}
+		}
+
+		static bool RemoveStringsInKnownGames( string gamecode, byte[] data ) {
+			KnownGamedata[] knownData = new KnownGamedata[] {
+				new KnownGamedata( "VI2J", 0x1047C8, 0x4A4 ), // FE12 English Patch
+			};
+
+			bool knownGame = false;
+			foreach ( KnownGamedata d in knownData ) {
+				if ( gamecode == d.Gamecode ) {
+					knownGame = true;
+					for ( uint i = d.Position; i < d.Position + d.Length; ++i ) {
+						if ( data[i] != 0 ) {
+							data[i] = 0x20;
+						}
+					}
+				}
+			}
+
+			return knownGame;
 		}
 
 		static bool ReplaceInData( byte[] data, byte paddingByte = 0x00, bool writeAdditionalBytePostString = false ) {
