@@ -256,7 +256,7 @@ namespace WfcPatcher {
 		}
 
 		//*----------------------------------------------------------------------------
-		public byte[] BLZ_Encode( byte[] raw_buffer, uint mode ) {
+		public byte[] BLZ_Encode( byte[] raw_buffer, uint mode, bool supressWarnings = false ) {
 			byte[] pak_buffer, new_buffer;
 			uint   raw_len, pak_len, new_len;
 
@@ -267,7 +267,7 @@ namespace WfcPatcher {
 			pak_buffer = null;
 			pak_len = BLZ_MAXIM + 1;
 
-			new_buffer = BLZ_Code(raw_buffer, raw_len, out new_len, mode);
+			new_buffer = BLZ_Code( raw_buffer, raw_len, out new_len, mode, supressWarnings );
 			if (new_len < pak_len) {
 				pak_buffer = new_buffer;
 				pak_len = new_len;
@@ -306,7 +306,7 @@ namespace WfcPatcher {
 			}
 		}
 		//*----------------------------------------------------------------------------
-		byte[] BLZ_Code( byte[] raw_buffer, uint raw_len, out uint new_len, uint best ) {
+		byte[] BLZ_Code( byte[] raw_buffer, uint raw_len, out uint new_len, uint best, bool supressWarnings = false ) {
 			byte[] pak_buffer; 
 			uint   pak, raw, raw_end, flg = 0;
 			byte[] tmp;
@@ -325,7 +325,9 @@ namespace WfcPatcher {
 			raw_new = raw_len;
 			if (arm9 != 0) {
 				if (raw_len < 0x4000) {
-					Console.Write(", WARNING: ARM9 must be greater as 16KB, switch [9] disabled");
+					if ( !supressWarnings ) {
+						Console.WriteLine( "WARNING: ARM9 must be greater than 16KB, switch [9] disabled" );
+					}
 				//} else if (
 				//	BitConverter.ToUInt32(raw_buffer, 0x0) != 0xE7FFDEFFu ||
 				//	BitConverter.ToUInt32(raw_buffer, 0x4) != 0xE7FFDEFFu ||
@@ -339,10 +341,12 @@ namespace WfcPatcher {
 					crc = BLZ_CRC16(raw_buffer, 0x10, 0x07F0);
 					byte[] crcbytes = BitConverter.GetBytes( crc );
 					if (!(raw_buffer[0x0E] == crcbytes[0] && raw_buffer[0x0F] == crcbytes[1])) {
-						Console.WriteLine( "NOTICE: CRC16 Secure Area 2KB do not match" );
-						Console.WriteLine( "        This may be indicative of a bad dump." );
-						Console.WriteLine( "        If you're patching a modified ROM, such as a hack or" );
-						Console.WriteLine( "        fan-translation, you can safely ignore this." );
+						if ( !supressWarnings ) {
+							Console.WriteLine( "NOTICE: CRC16 Secure Area 2KB do not match" );
+							Console.WriteLine( "        This may be indicative of a bad dump." );
+							Console.WriteLine( "        If you're patching a modified ROM, such as a hack or" );
+							Console.WriteLine( "        fan-translation, you can safely ignore this." );
+						}
 						raw_buffer[0x0E] = crcbytes[0];
 						raw_buffer[0x0F] = crcbytes[1];
 					}

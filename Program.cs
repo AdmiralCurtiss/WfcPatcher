@@ -135,7 +135,7 @@ namespace WfcPatcher {
 						// new ARM is actually bigger, redo without the additional nullterm replacement
 						decData = decDataUnmodified;
 						ReplaceInData( decData, 0x00, false );
-						data = blz.BLZ_Encode( decData, 0 );
+						data = blz.BLZ_Encode( decData, 0, supressWarnings: true );
 						newCompressedSize = (uint)data.Length;
 
 						int arm9diff = (int)len - (int)newCompressedSize;
@@ -147,7 +147,7 @@ namespace WfcPatcher {
 #if DEBUG
 							System.IO.File.WriteAllBytes( "arm9-dec-without-debug.bin", decData );
 #endif
-							data = blz.BLZ_Encode( decData, 0 );
+							data = blz.BLZ_Encode( decData, 0, supressWarnings: true );
 							newCompressedSize = (uint)data.Length;
 
 							arm9diff = (int)len - (int)newCompressedSize;
@@ -327,7 +327,7 @@ namespace WfcPatcher {
 						if ( diff < 0 ) {
 							Console.WriteLine( "Removing known debug strings and recompressing overlay " + id + "..." );
 							RemoveDebugStrings( decData );
-							data = blz.BLZ_Encode( decData, 0 );
+							data = blz.BLZ_Encode( decData, 0, supressWarnings: true );
 							newCompressedSize = (uint)data.Length;
 
 							newOverlaySize = data.Length;
