@@ -163,16 +163,29 @@ namespace WfcPatcher {
 
 					if ( newCompressedSize != len ) {
 						// new ARM is (still) different, attempt to find the metadata in the ARM9 secure area and replace that
-						byte[] newCmpSizeBytes = BitConverter.GetBytes( newCompressedSize );
+						bool foundSize = false;
 						for ( int i = 0; i < 0x4000; i += 4 ) {
 							uint maybeSize = BitConverter.ToUInt32( data, i );
-							if ( maybeSize == len + 0x02000000 ) {
+							if ( maybeSize == len + 0x02000000u || maybeSize == len + 0x02004000u ) {
+								foundSize = true;
+
+								byte[] newCmpSizeBytes;
+								if ( maybeSize == len + 0x02004000u ) {
+									newCmpSizeBytes = BitConverter.GetBytes( newCompressedSize + 0x02004000u );
+								} else {
+									newCmpSizeBytes = BitConverter.GetBytes( newCompressedSize + 0x02000000u );
+								}
+
 								data[i + 0] = newCmpSizeBytes[0];
 								data[i + 1] = newCmpSizeBytes[1];
 								data[i + 2] = newCmpSizeBytes[2];
-								data[i + 3] = (byte)( newCmpSizeBytes[3] + 0x02 );
+								data[i + 3] = newCmpSizeBytes[3];
 								break;
 							}
+						}
+						if ( !foundSize ) {
+							Console.WriteLine( "WARNING: Recompressed ARM9 is different size, and size could not be found in secure area!" );
+							Console.WriteLine( "         Patched game will probably not boot!" );
 						}
 					}
 #if DEBUG
@@ -186,6 +199,9 @@ namespace WfcPatcher {
 					Console.WriteLine( "Replacing ARM9..." );
 					data = decData;
 				}
+#if DEBUG
+				System.IO.File.WriteAllBytes( "arm9-new.bin", data );
+#endif
 
 				nds.Position = pos;
 				nds.Write( data, 0, data.Length );
