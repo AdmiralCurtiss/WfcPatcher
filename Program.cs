@@ -88,6 +88,8 @@ namespace WfcPatcher {
 			Console.WriteLine( "ARM9 old cmp size: 0x" + compressedSize.ToString( "X6" ) );
 			Console.WriteLine( "ARM9 old filesize: 0x" + len.ToString( "X6" ) );
 			Console.WriteLine( "ARM9 old diff:     0x" + additionalCompressedSize.ToString( "X6" ) );
+
+			System.IO.File.WriteAllBytes( "arm9-raw.bin", data );
 #endif
 
 			blz blz = new blz();
@@ -100,6 +102,9 @@ namespace WfcPatcher {
 					if ( maybeDecData.Length == decompressedSize ) {
 						compressed = true;
 						decData = maybeDecData;
+#if DEBUG
+						System.IO.File.WriteAllBytes( "arm9-dec.bin", decData );
+#endif
 					}
 				} catch ( Exception ) {
 					compressed = false;
@@ -124,6 +129,9 @@ namespace WfcPatcher {
 						if ( arm9diff < 0 ) {
 							// still too big, remove debug strings
 							decData = RemoveDebugStrings( decData );
+#if DEBUG
+							System.IO.File.WriteAllBytes( "arm9-dec-without-debug.bin", decData );
+#endif
 							data = blz.BLZ_Encode( decData, 0 );
 							newCompressedSize = (uint)data.Length;
 
@@ -131,6 +139,9 @@ namespace WfcPatcher {
 							if ( arm9diff < 0 ) {
 								Console.WriteLine( "WARNING: Recompressed ARM9 is " + -arm9diff + " bytes bigger than original!" );
 								Console.WriteLine( "         Patched game may be corrupted!" );
+#if DEBUG
+								System.IO.File.WriteAllBytes( "arm9-too-big-recomp.bin", data );
+#endif
 							}
 						}
 					}
