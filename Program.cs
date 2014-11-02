@@ -6,20 +6,20 @@ using System.Text;
 namespace WfcPatcher {
 	class Program {
 		static void Main( string[] args ) {
-			foreach ( string s in args ) {
-#if DEBUG
-#else
+			foreach ( string filename in args ) {
+				string newFilename = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( filename ), System.IO.Path.GetFileNameWithoutExtension( filename ) ) + " (AltWfc)" + System.IO.Path.GetExtension( filename );
+#if !DEBUG
 				try {
 #endif
-					string newFilename = PatchFile( s );
+					PatchFile( filename, newFilename );
 					Console.WriteLine( "Patched to " + newFilename + "!" );
 					Console.WriteLine();
-#if DEBUG
-#else
+#if !DEBUG
 				} catch ( Exception ex ) {
-					Console.WriteLine( "Failed patching " + s );
+					Console.WriteLine( "Failed patching " + filename );
 					Console.WriteLine( ex.ToString() );
 					Console.WriteLine();
+					System.IO.File.Delete( newFilename );
 				}
 #endif
 			}
@@ -33,10 +33,9 @@ namespace WfcPatcher {
 			return gamecode;
 		}
 
-		static string PatchFile( string filename ) {
+		static void PatchFile( string filename, string newFilename ) {
 			Console.WriteLine( "Reading and copying " + filename + "..." );
 			var ndsSrc = new System.IO.FileStream( filename, System.IO.FileMode.Open );
-			string newFilename = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( filename ), System.IO.Path.GetFileNameWithoutExtension( filename ) ) + " (AltWfc)" + System.IO.Path.GetExtension( filename );
 			var nds = new System.IO.FileStream( newFilename, System.IO.FileMode.Create );
 			Util.CopyStream( ndsSrc, nds, (int)ndsSrc.Length );
 			ndsSrc.Close();
@@ -70,8 +69,6 @@ namespace WfcPatcher {
 			PatchOverlay( nds, arm7overlayoff, arm7overlaylen );
 
 			nds.Close();
-
-			return newFilename;
 		}
 
 		static void PatchArm9( System.IO.FileStream nds, uint pos, uint len ) {
