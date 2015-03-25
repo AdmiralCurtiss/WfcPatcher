@@ -41,42 +41,44 @@ namespace WfcPatcher {
 
 		static bool PatchFile( string filename, string newFilename ) {
 			Console.WriteLine( "Reading and copying " + filename + "..." );
-			var ndsSrc = new System.IO.FileStream( filename, System.IO.FileMode.Open );
-			var nds = new System.IO.FileStream( newFilename, System.IO.FileMode.Create );
-			Util.CopyStream( ndsSrc, nds, (int)ndsSrc.Length );
-			ndsSrc.Close();
+			using ( var nds = new System.IO.FileStream( newFilename, System.IO.FileMode.Create ) ) {
+				using ( var ndsSrc = new System.IO.FileStream( filename, System.IO.FileMode.Open ) ) {
+					Util.CopyStream( ndsSrc, nds, (int)ndsSrc.Length );
+					ndsSrc.Close();
+				}
 
-			// http://dsibrew.org/wiki/DSi_Cartridge_Header
+				// http://dsibrew.org/wiki/DSi_Cartridge_Header
 
-			// arm
-			Console.WriteLine( "Patching ARM Executables..." );
-			nds.Position = 0x20;
-			uint arm9offset = nds.ReadUInt32();
-			uint arm9entry = nds.ReadUInt32();
-			uint arm9load = nds.ReadUInt32();
-			uint arm9size = nds.ReadUInt32();
-			uint arm7offset = nds.ReadUInt32();
-			uint arm7entry = nds.ReadUInt32();
-			uint arm7load = nds.ReadUInt32();
-			uint arm7size = nds.ReadUInt32();
+				// arm
+				Console.WriteLine( "Patching ARM Executables..." );
+				nds.Position = 0x20;
+				uint arm9offset = nds.ReadUInt32();
+				uint arm9entry = nds.ReadUInt32();
+				uint arm9load = nds.ReadUInt32();
+				uint arm9size = nds.ReadUInt32();
+				uint arm7offset = nds.ReadUInt32();
+				uint arm7entry = nds.ReadUInt32();
+				uint arm7load = nds.ReadUInt32();
+				uint arm7size = nds.ReadUInt32();
 
-			bool modArm9 = PatchArm9( nds, arm9offset, arm9size );
-			bool modArm7 = PatchArm7( nds, arm7offset, arm7size );
+				bool modArm9 = PatchArm9( nds, arm9offset, arm9size );
+				bool modArm7 = PatchArm7( nds, arm7offset, arm7size );
 
-			// overlays
-			Console.WriteLine( "Patching Overlays..." );
-			nds.Position = 0x50;
-			uint arm9overlayoff = nds.ReadUInt32();
-			uint arm9overlaylen = nds.ReadUInt32();
-			uint arm7overlayoff = nds.ReadUInt32();
-			uint arm7overlaylen = nds.ReadUInt32();
+				// overlays
+				Console.WriteLine( "Patching Overlays..." );
+				nds.Position = 0x50;
+				uint arm9overlayoff = nds.ReadUInt32();
+				uint arm9overlaylen = nds.ReadUInt32();
+				uint arm7overlayoff = nds.ReadUInt32();
+				uint arm7overlaylen = nds.ReadUInt32();
 
-			bool modOvl9 = PatchOverlay( nds, arm9overlayoff, arm9overlaylen );
-			bool modOvl7 = PatchOverlay( nds, arm7overlayoff, arm7overlaylen );
+				bool modOvl9 = PatchOverlay( nds, arm9overlayoff, arm9overlaylen );
+				bool modOvl7 = PatchOverlay( nds, arm7overlayoff, arm7overlaylen );
 
-			nds.Close();
+				nds.Close();
 
-			return modArm9 || modArm7 || modOvl9 || modOvl7;
+				return modArm9 || modArm7 || modOvl9 || modOvl7;
+			}
 		}
 
 		static bool PatchArm9( System.IO.FileStream nds, uint pos, uint len ) {
