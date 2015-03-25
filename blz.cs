@@ -4,6 +4,12 @@ using System.Linq;
 using System.Text;
 
 namespace WfcPatcher {
+	class blzDecodingException : Exception {
+		public blzDecodingException() : base() { }
+		public blzDecodingException( string message ) : base( message ) { }
+		public blzDecodingException( string message, Exception inner ) : base( message, inner ) { }
+	}
+
 	class blz {
 		/*----------------------------------------------------------------------------*/
 		/*--  blz.c - Bottom LZ coding for Nintendo GBA/DS                          --*/
@@ -168,25 +174,17 @@ namespace WfcPatcher {
 
 			inc_len = BitConverter.ToUInt32( pak_buffer, (int)pak_len - 4 );
 			if ( inc_len == 0 ) {
-				throw new Exception( "Not coded file!" );
-				enc_len = 0;
-				dec_len = pak_len;
-				pak_len = 0;
-				raw_len = dec_len;
-
-				fileWasNotCompressed = true;
-				//Console.WriteLine();
-				return pak_buffer;
+				throw new blzDecodingException( "Not coded file!" );
 			} else {
-				if ( pak_len < 8 ) throw new Exception( "File has a bad header" );
+				if ( pak_len < 8 ) throw new blzDecodingException( "File has a bad header" );
 				hdr_len = pak_buffer[pak_len - 5];
-				if ( ( hdr_len < 0x08 ) || ( hdr_len > 0x0B ) ) throw new Exception( "Bad header length" );
-				if ( pak_len <= hdr_len ) throw new Exception( "Bad length" );
+				if ( ( hdr_len < 0x08 ) || ( hdr_len > 0x0B ) ) throw new blzDecodingException( "Bad header length" );
+				if ( pak_len <= hdr_len ) throw new blzDecodingException( "Bad length" );
 				enc_len = BitConverter.ToUInt32( pak_buffer, (int)pak_len - 8 ) & 0x00FFFFFF;
 				dec_len = pak_len - enc_len;
 				pak_len = enc_len - hdr_len;
 				raw_len = dec_len + enc_len + inc_len;
-				if ( raw_len > RAW_MAXIM ) throw new Exception( "Bad decoded length" );
+				if ( raw_len > RAW_MAXIM ) throw new blzDecodingException( "Bad decoded length" );
 			}
 
 			raw_buffer = Memory( (int)raw_len, 1 );

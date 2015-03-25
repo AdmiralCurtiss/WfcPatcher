@@ -123,7 +123,7 @@ namespace WfcPatcher {
 						System.IO.File.WriteAllBytes( "arm9-dec.bin", decData );
 #endif
 					}
-				} catch ( Exception ) {
+				} catch ( blzDecodingException ) {
 					compressed = false;
 				}
 			}
@@ -306,7 +306,12 @@ namespace WfcPatcher {
 
 				bool compressed = ( compressedBitmask & 0x01 ) == 0x01;
 				if ( compressed ) {
-					decData = blz.BLZ_Decode( data );
+					try {
+						decData = blz.BLZ_Decode( data );
+					} catch ( blzDecodingException ) {
+						decData = data;
+						compressed = false;
+					}
 				} else {
 					decData = data;
 				}
