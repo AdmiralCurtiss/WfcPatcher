@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="blz.cs" />
     <Compile Include="ByteArrayRocks.cs" />
+    <Compile Include="CommandLineArguments.cs" />
     <Compile Include="Crc16.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

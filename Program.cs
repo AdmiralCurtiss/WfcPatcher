@@ -6,7 +6,9 @@ using System.Text;
 namespace WfcPatcher {
 	class Program {
 		static void Main( string[] args ) {
-			foreach ( string filename in args ) {
+			CommandLineArguments.ParseCommandLineArguments( args );
+
+			foreach ( string filename in CommandLineArguments.Filenames ) {
 				string newFilename = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( filename ), System.IO.Path.GetFileNameWithoutExtension( filename ) ) + " (AltWfc)" + System.IO.Path.GetExtension( filename );
 #if !DEBUG
 				try {
@@ -440,9 +442,17 @@ namespace WfcPatcher {
 		}
 
 		static bool ReplaceInData( byte[] data, byte paddingByte = 0x00, bool writeAdditionalBytePostString = false ) {
+			bool replaced = ReplaceInData( data, "https://", "http://", paddingByte, writeAdditionalBytePostString );
+
+			if ( CommandLineArguments.Domain != null ) {
+				replaced = ReplaceInData( data, "nintendowifi.net", CommandLineArguments.Domain, paddingByte, writeAdditionalBytePostString ) || replaced;
+			}
+
+			return replaced;
+		}
+
+		static bool ReplaceInData( byte[] data, string search, string replace, byte paddingByte = 0x00, bool writeAdditionalBytePostString = false ) {
 			bool replacedData = false;
-			string search = "https://";
-			string replace = "http://";
 			byte[] searchBytes = Encoding.ASCII.GetBytes( search );
 			byte[] replaceBytes = Encoding.ASCII.GetBytes( replace );
 			int requiredPadding = searchBytes.Length - replaceBytes.Length;
