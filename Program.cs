@@ -311,6 +311,7 @@ namespace WfcPatcher {
 					try {
 						decData = blz.BLZ_Decode( data );
 					} catch ( blzDecodingException ) {
+						Console.WriteLine( "WARNING: Decompression of Overlay " + ( i / 0x20 ) + " failed!" );
 						decData = data;
 						compressed = false;
 					}
@@ -318,6 +319,9 @@ namespace WfcPatcher {
 					decData = data;
 				}
 
+#if DEBUG
+				System.IO.File.WriteAllBytes( "overlay" + ( i / 0x20 ) + "-dec.bin", decData );
+#endif
 
 				if ( ReplaceInData( decData ) ) {
 					modified = true;
