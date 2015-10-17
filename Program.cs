@@ -8,8 +8,12 @@ namespace WfcPatcher {
 		static void Main( string[] args ) {
 			CommandLineArguments.ParseCommandLineArguments( args );
 
+			string domainFilenamePart = "NoSSL";
+			if ( CommandLineArguments.Domain != null ) {
+				domainFilenamePart = CommandLineArguments.Domain;
+			}
 			foreach ( string filename in CommandLineArguments.Filenames ) {
-				string newFilename = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( filename ), System.IO.Path.GetFileNameWithoutExtension( filename ) ) + " (NoSSL)" + System.IO.Path.GetExtension( filename );
+				string newFilename = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( filename ), System.IO.Path.GetFileNameWithoutExtension( filename ) ) + " (" + domainFilenamePart + ")" + System.IO.Path.GetExtension( filename );
 #if !DEBUG
 				try {
 #endif
