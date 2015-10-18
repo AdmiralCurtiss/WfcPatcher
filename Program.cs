@@ -5,8 +5,32 @@ using System.Text;
 
 namespace WfcPatcher {
 	class Program {
+		public static string ProgramName {
+			get {
+				Version version = System.Reflection.Assembly.GetEntryAssembly().GetName().Version;
+#if DEBUG
+				string versionString = version.ToString() + " (Debug)";
+#else
+				string versionString = version.Major + "." + version.Minor;
+#endif
+				return "WfcPatcher " + versionString;
+			}
+		}
+
 		static void Main( string[] args ) {
-			CommandLineArguments.ParseCommandLineArguments( args );
+			Console.WriteLine( ProgramName );
+			Console.WriteLine();
+
+			if ( !CommandLineArguments.ParseCommandLineArguments( args ) ) {
+				Console.WriteLine( "Error parsing command line options!" );
+				PrintUsage();
+				return;
+			}
+
+			if ( CommandLineArguments.Filenames.Length == 0 ) {
+				PrintUsage();
+				return;
+			}
 
 			string domainFilenamePart = "NoSSL";
 			if ( CommandLineArguments.Domain != null ) {
@@ -35,6 +59,14 @@ namespace WfcPatcher {
 				}
 #endif
 			}
+		}
+
+		public static void PrintUsage() {
+			Console.WriteLine( "Usage: WfcPatcher [options] game1.nds [game2.nds] [game3.nds] [...]" );
+			Console.WriteLine();
+			Console.WriteLine( "Command line options:" );
+			Console.WriteLine( "  -d, --domain example.com" );
+			Console.WriteLine( "    Point the NWFC URLs to a different URL instead." );
 		}
 
 		public static string GetGamecode( System.IO.FileStream nds ) {
